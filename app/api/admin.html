@@ -1,0 +1,1428 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>管理后台 · 企业知识库智能问答</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232563EB'/%3E%3Cpath d='M31 25.5c-3.6-2.6-8-3.9-13-3.9v21c5 0 9.4 1.3 13 3.9z' fill='%23fff'/%3E%3Cpath d='M33 25.5c3.6-2.6 8-3.9 13-3.9v21c-5 0-9.4 1.3-13 3.9z' fill='%23fff'/%3E%3C/svg%3E" />
+<style>
+  :root{
+    --radius: 6px;
+    --bg: #F7F8FA;
+    --surface: #FFFFFF;
+    --surface-2: #F9FAFB;
+    --line: #E5E7EB;
+    --line-strong: #D1D5DB;
+    --text: #111827;
+    --text-2: #4B5563;
+    --text-3: #6B7280;
+    --accent: #2563EB;
+    --accent-strong: #1D4ED8;
+    --accent-weak: rgba(37,99,235,.08);
+    --ok: #047857;                        /* 语义成功色：压浅绿底仍过 AA */
+    --warn: #92400E;                      /* 语义警告色：压浅琥珀底仍过 AA */
+    --err: #B91C1C;                       /* 语义错误色，与品牌蓝区分 */
+    --sidebar-w: 264px;
+    --shadow-sm: 0 1px 2px rgba(17,24,39,.04);
+    --shadow-md: 0 6px 24px rgba(17,24,39,.08);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;height:100%}
+  body{
+    font:14px/1.7 -apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    background:var(--bg);color:var(--text);
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:var(--accent)}
+
+  /* ============ 整体布局：左栏固定 + 右区自适应 ============ */
+  .app{display:flex;height:100vh;overflow:hidden}
+
+  /* ============ 左侧栏 ============ */
+  .sidebar{
+    width:var(--sidebar-w);flex:none;height:100%;
+    background:var(--surface);border-right:1px solid var(--line);
+    display:flex;flex-direction:column;overflow:hidden;
+  }
+  .brand{padding:16px;display:flex;align-items:center;gap:10px;flex:none}
+  .brand .logo{
+    width:32px;height:32px;border-radius:var(--radius);flex:none;
+    background:var(--surface-2);border:1px solid var(--line);
+    display:flex;align-items:center;justify-content:center;overflow:hidden;
+  }
+  .brand .logo img,.brand .logo svg{width:100%;height:100%;object-fit:contain;display:block}
+  .brand .btxt{min-width:0}
+  .brand .btxt .t1{font-size:14px;font-weight:700;color:var(--text);line-height:1.3;white-space:nowrap}
+  .brand .btxt .t2{font-size:12px;color:var(--text-3);line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+  .nav{flex:1;overflow-y:auto;padding:8px 12px}
+  .nav .group-title{
+    font-size:11.5px;color:var(--text-3);letter-spacing:.06em;
+    padding:8px 4px 4px;font-weight:500;text-transform:uppercase;
+  }
+  .nav-item{
+    height:36px;display:flex;align-items:center;gap:10px;
+    padding:0 10px;border-radius:var(--radius);cursor:pointer;
+    color:var(--text-2);font-size:13.5px;transition:.12s;margin-bottom:2px;
+  }
+  .nav-item:hover{background:var(--surface-2)}
+  .nav-item .ic{width:17px;height:17px;flex:none;color:var(--text-3)}
+  .nav-item.active{background:var(--accent-weak);color:var(--accent-strong);font-weight:500}
+  .nav-item.active .ic{color:var(--accent-strong)}
+
+  .me{padding:12px;border-top:1px solid var(--line);display:flex;align-items:center;gap:10px;flex:none}
+  .me .avatar{
+    width:34px;height:34px;border-radius:50%;flex:none;
+    background:var(--surface-2);border:1px solid var(--line);
+    display:flex;align-items:center;justify-content:center;
+    font-size:13px;font-weight:600;color:var(--text-2);
+  }
+  .me .minfo{min-width:0}
+  .me .mname{font-size:13px;font-weight:600;color:var(--text);line-height:1.3}
+  .me .mrole{font-size:11.5px;color:var(--text-3);line-height:1.3}
+  .me .logout{margin-left:auto;flex:none;border:0;background:transparent;color:var(--text-3);cursor:pointer;width:28px;height:28px;border-radius:var(--radius);display:flex;align-items:center;justify-content:center;transition:.15s}
+  .me .logout:hover{background:var(--accent-weak);color:var(--accent-strong)}
+
+  /* ============ 右侧主区 ============ */
+  .main{flex:1;min-width:0;display:flex;flex-direction:column;height:100%}
+  .topbar{
+    height:48px;flex:none;display:flex;align-items:center;gap:12px;
+    padding:0 20px;background:var(--surface);border-bottom:1px solid var(--line);
+  }
+  .breadcrumb{font-size:12.5px;color:var(--text-3);display:flex;align-items:center;gap:6px}
+  .breadcrumb .sep{color:var(--line-strong)}
+  .breadcrumb .cur{color:var(--text-2);font-weight:500}
+  .topbar .spacer{flex:1}
+  .top-link{
+    display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 14px;
+    border:1px solid var(--line-strong);border-radius:var(--radius);
+    color:var(--text-2);font-size:13px;text-decoration:none;transition:.15s;
+  }
+  .top-link:hover{border-color:var(--accent);color:var(--accent-strong);background:var(--accent-weak)}
+
+  .content{flex:1;overflow-y:auto;padding:20px}
+
+  /* ============ 面板 ============ */
+  .panel{
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+    box-shadow:var(--shadow-sm);overflow:hidden;margin-bottom:16px;
+  }
+  .panel-h{
+    padding:14px 18px;border-bottom:1px solid var(--line);font-size:14px;font-weight:600;
+    display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  }
+  .panel-h .hint{font-size:12px;font-weight:400;color:var(--text-3);margin-left:auto}
+  .ph-right{margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .panel-b{padding:16px 18px}
+
+  /* ============ 按钮 ============ */
+  .btn{
+    border:1px solid var(--line-strong);background:var(--surface);color:var(--text-2);
+    border-radius:var(--radius);height:34px;padding:0 14px;font-size:13px;cursor:pointer;transition:.15s;
+    display:inline-flex;align-items:center;gap:6px;
+  }
+  .btn:hover{border-color:var(--accent);color:var(--accent-strong);background:var(--accent-weak)}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+  .btn.primary:hover{background:var(--accent-strong)}
+  .btn.danger{color:var(--err)}
+  .btn.danger:hover{border-color:var(--accent);background:var(--accent-weak);color:var(--accent-strong)}
+  .btn:disabled{opacity:.5;cursor:default}
+  .btn.sm{height:28px;padding:0 9px;font-size:12px}
+
+  /* ============ 表单控件 ============ */
+  .add-form{display:flex;gap:10px;padding:16px 18px;flex-wrap:wrap;align-items:center}
+  input[type=text], input[type=password], select{
+    height:36px;padding:0 12px;font-size:13px;border:1px solid var(--line-strong);
+    border-radius:var(--radius);background:var(--surface);color:var(--text);outline:none;transition:.15s;
+  }
+  input:focus, select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-weak)}
+  .add-form input[type=text]{flex:1;min-width:160px}
+  .add-form input[type=password]{width:150px}
+  .mini-input{height:34px;padding:0 10px;font-size:13px;border:1px solid var(--line-strong);
+    border-radius:var(--radius);background:var(--surface);color:var(--text);outline:none;transition:.15s}
+  .mini-input:focus{border-color:var(--accent)}
+  #doc-q{width:200px}
+
+  /* 密码框 + 显隐按钮 */
+  .pwd-wrap{position:relative;display:inline-flex;align-items:center}
+  .pwd-wrap input{padding-right:36px !important}
+  .pwd-wrap .eye{
+    position:absolute;right:6px;width:26px;height:26px;border:0;background:transparent;
+    color:var(--text-3);cursor:pointer;border-radius:4px;display:flex;align-items:center;
+    justify-content:center;transition:.15s;padding:0;
+  }
+  .pwd-wrap .eye:hover{color:var(--accent-strong);background:var(--accent-weak)}
+  .pwd-wrap .eye svg{width:16px;height:16px;display:block}
+
+  /* ============ 表格 ============ */
+  table{width:100%;border-collapse:collapse}
+  th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--line);font-size:13px;vertical-align:top}
+  th{background:var(--surface-2);color:var(--text-2);font-weight:500;font-size:12px;white-space:nowrap}
+  tr:last-child td{border-bottom:none}
+  .td-title{font-weight:500;max-width:280px}
+  .td-mono{font-family:ui-monospace,"SFMono-Regular",Consolas,monospace;font-size:12px;color:var(--text-2);max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .td-dim{color:var(--text-3);font-size:12px;white-space:nowrap}
+  .tag{display:inline-block;padding:1px 8px;border-radius:20px;font-size:11px;line-height:1.6;background:var(--surface-2);color:var(--text-2);border:1px solid var(--line-strong)}
+  .tag.admin{background:var(--accent-weak);color:var(--accent-strong);border-color:rgba(37,99,235,.16)}
+  .tag.user{background:var(--surface-2);color:var(--text-2)}
+  .tag.on{background:#E8F6EF;color:var(--ok);border-color:transparent}
+  .tag.off{background:#FDECEC;color:var(--err);border-color:transparent}
+  .tag.warn{background:#FBF0DC;color:var(--warn);border-color:transparent}
+  .tag.err{background:#FDECEC;color:var(--err);border-color:transparent}
+  .tag.cat{background:#EDF2FA;color:#3A5A8C;border-color:transparent;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;vertical-align:bottom}
+  .me-row{background:var(--accent-weak)}
+  .row-actions{display:flex;gap:8px;flex-wrap:wrap}
+  td.col-check{width:38px;padding-right:0}
+  input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--accent)}
+
+  /* ============ 知识库管理：分类树 + 文档列表 ============ */
+  .lib-layout{display:flex;gap:16px;align-items:flex-start}
+  .lib-side{width:272px;flex:none}
+  .lib-main{flex:1;min-width:0}
+
+  .cat-tree{padding:6px 0;max-height:calc(100vh - 260px);overflow-y:auto}
+  .cat-node{
+    display:flex;align-items:center;gap:4px;padding:5px 10px;cursor:pointer;
+    font-size:13px;color:var(--text-2);transition:.1s;border-radius:4px;margin:0 6px 1px;
+  }
+  .cat-node:hover{background:var(--surface-2)}
+  .cat-node.sel{background:var(--accent-weak);color:var(--accent-strong);font-weight:600}
+  .cat-node .caret{width:14px;flex:none;color:var(--text-3);font-size:10px;text-align:center}
+  .cat-node .cname{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cat-node .cn{font-size:11px;color:var(--text-3);flex:none;font-variant-numeric:tabular-nums}
+  .cat-node.sel .cn{color:var(--accent-strong)}
+  .cat-ops{display:none;gap:1px;flex:none}
+  .cat-node:hover .cat-ops{display:flex}
+  .cat-ops button{
+    width:20px;height:20px;border:0;background:transparent;color:var(--text-3);
+    cursor:pointer;border-radius:3px;font-size:12px;line-height:1;padding:0;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .cat-ops button:hover{background:var(--line);color:var(--accent-strong)}
+  .cat-ops button.del:hover{color:var(--err)}
+  .cat-empty{padding:14px 16px;color:var(--text-3);font-size:12.5px}
+
+  .toolbar{display:flex;align-items:center;gap:8px;padding:12px 18px;flex-wrap:wrap;border-bottom:1px solid var(--line)}
+  .toolbar .spacer{flex:1}
+  .bulkbar{
+    display:none;align-items:center;gap:8px;padding:10px 18px;flex-wrap:wrap;
+    background:var(--accent-weak);border-bottom:1px solid var(--line);font-size:13px;
+  }
+  .bulkbar.show{display:flex}
+  .pager{display:flex;align-items:center;gap:10px;padding:12px 18px;flex-wrap:wrap}
+  .pager .info{font-size:12.5px;color:var(--text-3)}
+  .pager .spacer{flex:1}
+
+  .upload-row{display:flex;align-items:center;gap:10px;padding:16px 18px;flex-wrap:wrap}
+  .upload-row input[type=file]{font-size:13px;flex:1;min-width:200px}
+
+  /* ============ 模态框 ============ */
+  .modal-mask{
+    position:fixed;inset:0;background:rgba(17,24,39,.42);z-index:60;
+    display:none;align-items:center;justify-content:center;padding:20px;
+  }
+  .modal-mask.show{display:flex}
+  .modal{
+    background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow-md);
+    width:420px;max-width:100%;overflow:hidden;
+  }
+  .modal-h{padding:14px 18px;border-bottom:1px solid var(--line);font-size:14px;font-weight:600}
+  .modal-b{padding:16px 18px;display:flex;flex-direction:column;gap:12px}
+  .modal-b label{font-size:12.5px;color:var(--text-2);display:block;margin-bottom:5px}
+  .modal-b input[type=text],.modal-b input[type=password],.modal-b select{width:100%}
+  .modal-f{padding:12px 18px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end}
+  .modal-note{font-size:12px;color:var(--text-3);line-height:1.6}
+  .modal.wide{width:min(900px,96vw)}
+  .modal-b.scroll{max-height:72vh;overflow:auto}
+
+  /* ============ 入库报告 ============ */
+  .stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px;margin-bottom:4px}
+  .stat{background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius);padding:10px 12px}
+  .stat-v{font-size:18px;font-weight:700;color:var(--text);line-height:1.3;font-variant-numeric:tabular-nums}
+  .stat-k{font-size:11.5px;color:var(--text-3);margin-top:2px}
+  .report-time{font-size:12px;color:var(--text-3);margin-bottom:12px}
+  .report-lists{margin-top:14px;display:flex;flex-direction:column;gap:12px}
+  .rlist .rlist-t{font-size:12.5px;font-weight:600;color:var(--text-2);margin-bottom:4px}
+  .rlist ul{margin:0;padding:0;list-style:none;font-size:12.5px;color:var(--text-3)}
+  .rlist li{padding:3px 0;border-bottom:1px dashed var(--line);word-break:break-word}
+  .rlist li:last-child{border-bottom:0}
+
+  /* ============ 切片查看 ============ */
+  .chunk-list{display:flex;flex-direction:column;gap:10px}
+  .chunk-item{border:1px solid var(--line);border-radius:var(--radius);padding:10px 12px;background:var(--surface-2)}
+  .chunk-item.parent{border-color:rgba(37,99,235,.22);background:var(--accent-weak)}
+  .chunk-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+  .chunk-ord{font-weight:600;color:var(--text);font-size:12.5px}
+  .chunk-flag{font-size:11px;color:var(--accent-strong);background:var(--surface);border:1px solid rgba(37,99,235,.25);border-radius:20px;padding:0 8px;line-height:1.6}
+  .chunk-tag{font-size:11px;color:var(--text-3);background:var(--surface);border:1px solid var(--line-strong);border-radius:20px;padding:0 8px;line-height:1.6;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .chunk-text{font-size:12.5px;color:var(--text-2);white-space:pre-wrap;word-break:break-word;line-height:1.7}
+  .chunk-meta{font-size:11px;color:var(--text-3);margin-top:6px;display:flex;gap:12px;flex-wrap:wrap;font-variant-numeric:tabular-nums}
+
+  /* ============ 仪表盘：柱状图 ============ */
+  .bar-chart{display:flex;align-items:flex-end;gap:4px;padding:8px 6px 0;border-bottom:1px solid var(--line);overflow-x:auto;min-height:190px}
+  .bar-col{flex:1 0 auto;min-width:24px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end}
+  .bar-stack{display:flex;flex-direction:column;align-items:center;justify-content:flex-end}
+  .bar-v{font-size:10.5px;color:var(--text-3);font-variant-numeric:tabular-nums;line-height:1.2;margin-bottom:2px}
+  .bar{width:100%;max-width:22px;background:var(--accent);border-radius:3px 3px 0 0}
+  .bar-label{font-size:10px;color:var(--text-3);white-space:nowrap;line-height:1.2;margin-top:4px;height:14px}
+
+  /* ============ 空态 ============ */
+  .empty{color:var(--text-3);font-size:13px;padding:8px 0;text-align:center}
+  .empty.err{color:var(--err)}
+
+  /* ============ Toast ============ */
+  .toast{
+    position:fixed;bottom:28px;left:50%;transform:translateX(-50%);
+    background:var(--text);color:#fff;border-radius:var(--radius);
+    padding:10px 20px;font-size:13px;box-shadow:var(--shadow-md);
+    opacity:0;pointer-events:none;transition:.2s;z-index:80;max-width:80vw;
+  }
+  .toast.show{opacity:1}
+  .toast.err{background:var(--err)}
+
+  @media (max-width:980px){
+    .lib-layout{flex-direction:column}
+    .lib-side{width:100%}
+    .cat-tree{max-height:280px}
+  }
+  @media (max-width:720px){
+    .sidebar{display:none}
+    .content{padding:12px}
+    .td-title,.td-mono{max-width:160px}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ================= 左侧栏 ================= -->
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="logo"><svg viewBox="0 0 64 64" role="img" aria-label="logo"><rect width="64" height="64" rx="14" fill="#2563EB"/><path d="M31 25.5c-3.6-2.6-8-3.9-13-3.9v21c5 0 9.4 1.3 13 3.9z" fill="#fff"/><path d="M33 25.5c3.6-2.6 8-3.9 13-3.9v21c-5 0-9.4 1.3-13 3.9z" fill="#fff"/></svg></span>
+      <div class="btxt">
+        <div class="t1">企业知识库智能问答</div>
+        <div class="t2">管理后台</div>
+      </div>
+    </div>
+
+    <nav class="nav">
+      <div class="group-title">知识库</div>
+      <div class="nav-item active" data-view="library">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><path d="M9 7h7M9 11h5"/></svg>
+        <span>知识库管理</span>
+      </div>
+      <div class="nav-item" data-view="kb">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6"/><path d="M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/></svg>
+        <span>入库维护</span>
+      </div>
+      <div class="group-title">系统</div>
+      <div class="nav-item" data-view="accounts">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="9" r="2.5"/><path d="M15 14.5c2.8.3 5 2.2 5 5"/></svg>
+        <span>账号管理</span>
+      </div>
+      <div class="nav-item" data-view="metrics">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l3-4 3 2 4-6"/></svg>
+        <span>API 调用量</span>
+      </div>
+    </nav>
+
+    <div class="me">
+      <div class="avatar" id="me-avatar">管</div>
+      <div class="minfo">
+        <div class="mname" id="me-name">—</div>
+        <div class="mrole" id="me-role">管理员</div>
+      </div>
+      <button class="logout" id="logout" type="button" title="退出登录" aria-label="退出登录">
+        <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M8 4H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3M12 4h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1h-3M13 10H7m3-3l3 3-3 3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+  </aside>
+
+  <!-- ================= 右侧主区 ================= -->
+  <div class="main">
+    <div class="topbar">
+      <div class="breadcrumb"><span>管理后台</span><span class="sep">/</span><span class="cur" id="cur">知识库管理</span></div>
+      <div class="spacer"></div>
+      <a class="top-link" href="/">返回问答</a>
+    </div>
+    <div class="content" id="content"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- 通用模态框 -->
+<div class="modal-mask" id="mask">
+  <div class="modal">
+    <div class="modal-h" id="modal-title">标题</div>
+    <div class="modal-b" id="modal-body"></div>
+    <div class="modal-f">
+      <button class="btn" id="modal-cancel" type="button">取消</button>
+      <button class="btn primary" id="modal-ok" type="button">确定</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ================= 工具 ================= */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+let ME = {username:'', role:''};
+let kbRoot = '';
+
+/* 知识库管理状态 */
+let CATS = [];              // 扁平分类列表
+let CAT_OPEN = new Set();   // 展开的分类 id
+let CAT_SEL = 0;            // 当前选中：>=1 分类 id，0 全部，-1 未分类
+let DOC_ROWS = [];          // 当前页文档
+let DOC_TOTAL = 0;
+let DOC_PAGE = 1;
+let DOC_LIMIT = 50;
+let DOC_SEL = new Set();    // 勾选的 doc_id
+
+const EYE_OPEN = '<svg viewBox="0 0 20 20" fill="none"><path d="M1.8 10S4.9 4.8 10 4.8 18.2 10 18.2 10 15.1 15.2 10 15.2 1.8 10 1.8 10z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><circle cx="10" cy="10" r="2.6" stroke="currentColor" stroke-width="1.5"/></svg>';
+const EYE_OFF  = '<svg viewBox="0 0 20 20" fill="none"><path d="M1.8 10S4.9 4.8 10 4.8 18.2 10 18.2 10 15.1 15.2 10 15.2 1.8 10 1.8 10z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><circle cx="10" cy="10" r="2.6" stroke="currentColor" stroke-width="1.5"/><path d="M3 17L17 3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>';
+
+function toast(msg, isErr){
+  const t = $('#toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (isErr ? ' err' : '');
+  clearTimeout(t._h);
+  t._h = setTimeout(()=>t.className='toast', 2600);
+}
+
+/* ================= 接口层 ================= */
+async function api(method, path, body, timeoutMs){
+  const ctrl = timeoutMs ? new AbortController() : null;
+  if(ctrl) setTimeout(()=>ctrl.abort(), timeoutMs);
+  const r = await fetch(path, {
+    method,
+    headers:{'Content-Type':'application/json'},
+    body: body ? JSON.stringify(body) : undefined,
+    signal: ctrl ? ctrl.signal : undefined
+  });
+  if(r.status === 401){ window.location.href = '/'; throw new Error('unauth'); }
+  if(r.status === 403){ throw new Error('需要管理员权限'); }
+  let d = null;
+  try{ d = await r.json(); }catch(e){ d = null; }
+  if(!r.ok) throw new Error((d && d.detail) || ('请求失败（' + r.status + '）'));
+  return d;
+}
+
+function fmtTs(ts){
+  if(!ts) return '—';
+  const d = new Date(ts * 1000);
+  const p = n => String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+/* 相关度：unanswered 表的 top_score 存的是 round(best_dense,4)，语义是余弦相似度（不是 RRF 融合分），
+   所以数值本身没问题，只是呈现要跟问答页统一成整数百分比（问答页显示「相关度 59%」）。
+   null 表示这条记录没留下分值，显示破折号而不是 0%。 */
+function fmtPct(v){
+  return v == null ? '—' : Math.round(Number(v) * 100) + '%';
+}
+
+/* ================= 模态框 ================= */
+let _modalOk = null;
+function openModal(title, bodyHtml, onOk, okText){
+  $('#modal-title').textContent = title;
+  $('#modal-body').innerHTML = bodyHtml;
+  $('#modal-ok').textContent = okText || '确定';
+  _modalOk = onOk;
+  $('#mask').classList.add('show');
+  const first = $('#modal-body').querySelector('input,select');
+  if(first) setTimeout(()=>first.focus(), 30);
+}
+function closeModal(){
+  $('#mask').classList.remove('show');
+  const modal = $('#mask .modal');
+  if(modal) modal.classList.remove('wide');
+  const mb = $('#modal-body');
+  if(mb) mb.classList.remove('scroll');
+  $('#modal-cancel').style.display = '';
+  _modalOk = null;
+}
+$('#modal-cancel').addEventListener('click', closeModal);
+$('#modal-ok').addEventListener('click', ()=>{
+  const fn = _modalOk;
+  if(fn) fn();
+});
+$('#mask').addEventListener('click', e=>{ if(e.target === $('#mask')) closeModal(); });
+document.addEventListener('keydown', e=>{
+  if(e.key === 'Escape' && $('#mask').classList.contains('show')) closeModal();
+});
+
+/* 密码显隐：委托到 document，任何 .eye[data-toggle] 都能用 */
+document.addEventListener('click', e=>{
+  const btn = e.target.closest('.eye[data-toggle]');
+  if(!btn) return;
+  const input = document.getElementById(btn.dataset.toggle);
+  if(!input) return;
+  const show = input.type === 'password';
+  input.type = show ? 'text' : 'password';
+  btn.innerHTML = show ? EYE_OFF : EYE_OPEN;
+  btn.title = show ? '隐藏密码' : '显示密码';
+});
+
+/* ================= 视图切换 ================= */
+const VIEW_NAME = {library:'知识库管理', kb:'入库维护', accounts:'账号管理', metrics:'API 调用量'};
+function switchView(v){
+  document.querySelectorAll('.nav-item').forEach(i=>i.classList.toggle('active', i.dataset.view===v));
+  $('#cur').textContent = VIEW_NAME[v] || '';
+  if(v==='library') renderLibrary();
+  else if(v==='kb') renderKB();
+  else if(v==='accounts') renderAccounts();
+  else if(v==='metrics') renderMetrics();
+}
+
+/* ================= 模块一：知识库管理（分类树 + 文档 CRUD） ================= */
+function renderLibrary(){
+  $('#content').innerHTML = `
+    <div class="lib-layout">
+      <div class="lib-side">
+        <div class="panel">
+          <div class="panel-h"><span>分类</span>
+            <div class="ph-right">
+              <button class="btn sm" id="cat-new-root" type="button" title="新建顶级分类">+ 新建</button>
+              <button class="btn sm" id="cat-migrate" type="button" title="把历史 meta 里的分类字符串迁入分类表">导入历史</button>
+            </div>
+          </div>
+          <div class="cat-tree" id="cat-tree"><div class="cat-empty">加载中…</div></div>
+        </div>
+      </div>
+      <div class="lib-main">
+        <div class="panel">
+          <div class="panel-h"><span>文档列表</span>
+            <div class="ph-right">
+              <input class="mini-input" id="doc-q" type="text" placeholder="搜索标题 / 路径" autocomplete="off" />
+              <select class="mini-input" id="doc-type">
+                <option value="">全部类型</option>
+                <option value="markdown">markdown</option><option value="text">text</option>
+                <option value="pdf">pdf</option><option value="docx">docx</option>
+                <option value="pptx">pptx</option><option value="xlsx">xlsx</option>
+                <option value="html">html</option><option value="image">image</option>
+              </select>
+              <button class="btn sm" id="docs-refresh" type="button">刷新</button>
+            </div>
+          </div>
+          <div class="bulkbar" id="bulkbar">
+            <span id="bulk-count">已选 0 篇</span>
+            <select class="mini-input" id="bulk-cat"><option value="">移动到分类…</option></select>
+            <button class="btn sm" id="bulk-apply" type="button">归类</button>
+            <button class="btn sm danger" id="bulk-del" type="button">删除所选</button>
+            <button class="btn sm" id="bulk-clear" type="button">取消选择</button>
+          </div>
+          <div id="docs-body"><div class="empty" style="padding:24px 0">加载中…</div></div>
+          <div class="pager" id="pager"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-h"><span>上传文档</span>
+            <span class="hint">支持 md / txt / pdf / docx / pptx / xlsx / 图片，入库后可立即被检索</span>
+          </div>
+          <div class="upload-row">
+            <input type="file" id="up-file" />
+            <select class="mini-input" id="up-cat"><option value="0">归入：未分类</option></select>
+            <button class="btn primary" id="up-go" type="button">上传入库</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+
+  $('#cat-new-root').addEventListener('click', ()=>catEdit(null, 0));
+  $('#cat-migrate').addEventListener('click', doMigrate);
+  $('#docs-refresh').addEventListener('click', ()=>loadDocsPage(1));
+  $('#doc-q').addEventListener('input', debounce(()=>loadDocsPage(1), 300));
+  $('#doc-type').addEventListener('change', ()=>loadDocsPage(1));
+  $('#bulk-clear').addEventListener('click', ()=>{ DOC_SEL.clear(); renderDocsTable(); });
+  $('#bulk-apply').addEventListener('click', bulkAssign);
+  $('#bulk-del').addEventListener('click', bulkDelete);
+  $('#up-go').addEventListener('click', doUpload);
+
+  loadCategories();
+  loadDocsPage(1);
+}
+
+function debounce(fn, ms){
+  let t = null;
+  return function(){ clearTimeout(t); t = setTimeout(fn, ms); };
+}
+
+/* ---------------- 分类树 ---------------- */
+async function loadCategories(){
+  try{
+    const d = await api('GET', '/admin/api/categories');
+    CATS = Array.isArray(d.categories) ? d.categories : [];
+    // 首次加载时默认展开所有根分类，否则用户进来只看到一堆折叠的顶级节点
+    if(CAT_OPEN.size === 0){
+      CATS.filter(c=>c.parent_id === 0).forEach(c=>CAT_OPEN.add(c.id));
+    }
+    renderCatTree();
+    renderCatSelects();
+  }catch(e){
+    if(e.message !== 'unauth'){
+      $('#cat-tree').innerHTML = `<div class="cat-empty err">分类加载失败：${esc(e.message)}</div>`;
+    }
+  }
+}
+
+function catChildren(pid){
+  return CATS.filter(c=>c.parent_id === pid)
+             .sort((a,b)=>(a.sort_order-b.sort_order) || (a.id-b.id));
+}
+
+function renderCatTree(){
+  const box = $('#cat-tree');
+  if(!box) return;
+  let html = `
+    <div class="cat-node ${CAT_SEL===0?'sel':''}" data-cat="0">
+      <span class="caret"></span><span class="cname">全部文档</span><span class="cn">${totalAll()}</span>
+    </div>
+    <div class="cat-node ${CAT_SEL===-1?'sel':''}" data-cat="-1">
+      <span class="caret"></span><span class="cname">未分类</span>
+    </div>`;
+
+  const walk = (c, depth) => {
+    const kids = catChildren(c.id);
+    const open = CAT_OPEN.has(c.id);
+    const pad = 6 + depth * 14;
+    html += `<div class="cat-node ${CAT_SEL===c.id?'sel':''}" data-cat="${c.id}" style="padding-left:${pad}px">
+      <span class="caret">${kids.length ? (open ? '▾' : '▸') : ''}</span>
+      <span class="cname" title="${esc(c.name)}">${esc(c.name)}</span>
+      <span class="cn">${c.total_count}</span>
+      <span class="cat-ops">
+        <button data-act="new" data-id="${c.id}" type="button" title="新建子分类">+</button>
+        <button data-act="edit" data-id="${c.id}" type="button" title="重命名 / 移动">✎</button>
+        <button data-act="up" data-id="${c.id}" type="button" title="上移">↑</button>
+        <button data-act="down" data-id="${c.id}" type="button" title="下移">↓</button>
+        <button class="del" data-act="del" data-id="${c.id}" type="button" title="删除">×</button>
+      </span>
+    </div>`;
+    if(open) kids.forEach(k=>walk(k, depth+1));
+  };
+  catChildren(0).forEach(c=>walk(c, 0));
+
+  if(!CATS.length){
+    html += `<div class="cat-empty">暂无分类。点击「导入历史」把文档里已有的分类迁进来，或「新建」手动建。</div>`;
+  }
+  box.innerHTML = html;
+}
+
+function totalAll(){
+  return CATS.filter(c=>c.parent_id===0).reduce((s,c)=>s+c.total_count, 0);
+}
+
+/* 分类下拉（用于批量归类 / 上传归类 / 移动分类） */
+function catOptionsHTML(sel, excludeIds){
+  let h = '';
+  const walk = (c, depth) => {
+    if(excludeIds && excludeIds.has(c.id)) return;
+    h += `<option value="${c.id}" ${c.id===sel?'selected':''}>${'　'.repeat(depth)}${esc(c.name)}</option>`;
+    catChildren(c.id).forEach(k=>walk(k, depth+1));
+  };
+  catChildren(0).forEach(c=>walk(c, 0));
+  return h;
+}
+
+function renderCatSelects(){
+  const bc = $('#bulk-cat'), uc = $('#up-cat');
+  if(bc) bc.innerHTML = `<option value="0">（设为未分类）</option>` + catOptionsHTML(0, null);
+  if(uc) uc.innerHTML = `<option value="0">归入：未分类</option>` + catOptionsHTML(0, null);
+}
+
+/* 分类：新建 / 重命名 / 移动 */
+function catEdit(cat, parentId){
+  const isNew = !cat;
+  const cur = cat || {name:'', parent_id:parentId || 0};
+  let excl = null;
+  if(cat){
+    // 不能移到自己或自己的子孙下（会成环）
+    excl = new Set([cat.id]);
+    const stack = [cat.id];
+    while(stack.length){
+      const cid = stack.pop();
+      CATS.filter(c=>c.parent_id===cid).forEach(k=>{ excl.add(k.id); stack.push(k.id); });
+    }
+  }
+  openModal(isNew ? '新建分类' : '编辑分类', `
+    <div>
+      <label>分类名称</label>
+      <input type="text" id="m-cat-name" value="${esc(cur.name)}" placeholder="如：入职流程" autocomplete="off" />
+    </div>
+    <div>
+      <label>上级分类</label>
+      <select id="m-cat-parent">
+        <option value="0" ${cur.parent_id===0?'selected':''}>（顶级分类）</option>
+        ${catOptionsHTML(cur.parent_id || 0, excl)}
+      </select>
+    </div>`, async ()=>{
+    const name = ($('#m-cat-name').value || '').trim();
+    if(!name){ toast('请填写分类名称', true); return; }
+    const pid = parseInt($('#m-cat-parent').value || '0', 10);
+    try{
+      if(isNew){
+        const r = await api('POST', '/admin/api/categories', {name, parent_id: pid});
+        CAT_OPEN.add(pid);
+        toast('已创建分类「' + name + '」');
+      }else{
+        await api('POST', '/admin/api/categories/rename', {cat_id: cat.id, name});
+        if(pid !== cat.parent_id){
+          await api('POST', '/admin/api/categories/move', {cat_id: cat.id, parent_id: pid});
+          CAT_OPEN.add(pid);
+        }
+        toast('已保存');
+      }
+      closeModal();
+      loadCategories();
+    }catch(e){ toast(e.message, true); }
+  }, isNew ? '创建' : '保存');
+}
+
+/* 分类：删除 / 排序 */
+async function catDelete(id){
+  const c = CATS.find(x=>x.id===id);
+  if(!c) return;
+  const used = c.doc_count;
+  const msg = used
+    ? `「${c.name}」下还有 ${used} 篇文档。\n删除后这些文档会变为「未分类」，文档本身不会被删除。\n确认删除该分类？`
+    : `确认删除分类「${c.name}」？`;
+  if(!confirm(msg)) return;
+  try{
+    await api('POST', '/admin/api/categories/delete', {cat_id: id, force: true});
+    toast('已删除分类「' + c.name + '」');
+    if(CAT_SEL === id) CAT_SEL = 0;
+    loadCategories();
+    loadDocsPage(DOC_PAGE);
+  }catch(e){ toast(e.message, true); }
+}
+
+async function catMove(id, dir){
+  const c = CATS.find(x=>x.id===id);
+  if(!c) return;
+  const sibs = catChildren(c.parent_id);
+  const i = sibs.findIndex(x=>x.id===id);
+  const j = i + dir;
+  if(i < 0 || j < 0 || j >= sibs.length) return;
+  // 交换两者的 sort_order：只改两条记录，比全量重排整个层级更省事也更安全
+  const a = sibs[i], b = sibs[j];
+  try{
+    await api('POST', '/admin/api/categories/order', {orders: [[a.id, b.sort_order], [b.id, a.sort_order]]});
+    loadCategories();
+  }catch(e){ toast(e.message, true); }
+}
+
+async function doMigrate(){
+  if(!confirm('把文档中已有的历史分类（meta 里的分类字符串）导入分类表。\n该操作幂等，重复执行不会重复导入。\n确认继续？')) return;
+  try{
+    const r = await api('POST', '/admin/api/categories/migrate', {});
+    toast(r.categories ? `已导入 ${r.categories} 个分类，归类 ${r.docs} 篇文档` : '没有需要导入的历史分类');
+    loadCategories();
+    loadDocsPage(1);
+  }catch(e){ toast(e.message, true); }
+}
+
+/* ---------------- 文档列表 ---------------- */
+async function loadDocsPage(page){
+  DOC_PAGE = page || 1;
+  const q = ($('#doc-q') && $('#doc-q').value || '').trim();
+  const type = $('#doc-type') ? $('#doc-type').value : '';
+  const params = new URLSearchParams({
+    q, type, limit: String(DOC_LIMIT), offset: String((DOC_PAGE-1)*DOC_LIMIT)
+  });
+  if(CAT_SEL > 0){ params.set('category_id', String(CAT_SEL)); params.set('include_sub','true'); }
+  else if(CAT_SEL === -1){ params.set('unclassified','true'); }
+  try{
+    const d = await api('GET', '/admin/api/docs?' + params.toString());
+    DOC_ROWS = Array.isArray(d.docs) ? d.docs : [];
+    DOC_TOTAL = d.total || 0;
+    renderDocsTable();
+    renderPager();
+  }catch(e){
+    if(e.message !== 'unauth'){
+      const b = $('#docs-body');
+      if(b) b.innerHTML = `<div class="empty err">文档加载失败：${esc(e.message)}</div>`;
+    }
+  }
+}
+
+function renderDocsTable(){
+  const box = $('#docs-body');
+  if(!box) return;
+  if(!DOC_ROWS.length){
+    box.innerHTML = `<div class="empty" style="padding:24px 0">没有符合条件的文档</div>`;
+    updateBulkBar();
+    return;
+  }
+  const allSel = DOC_ROWS.every(d=>DOC_SEL.has(d.doc_id));
+  box.innerHTML = `<table>
+    <thead><tr>
+      <th class="col-check"><input type="checkbox" id="chk-all" ${allSel?'checked':''} title="全选本页" /></th>
+      <th>标题</th><th>分类</th><th>类型</th><th>字数</th><th>分块</th><th>更新时间</th><th style="width:150px">操作</th>
+    </tr></thead>
+    <tbody>${DOC_ROWS.map(docRow).join('')}</tbody>
+  </table>`;
+  const ca = $('#chk-all');
+  if(ca) ca.addEventListener('change', ()=>{
+    if(ca.checked) DOC_ROWS.forEach(d=>DOC_SEL.add(d.doc_id));
+    else DOC_ROWS.forEach(d=>DOC_SEL.delete(d.doc_id));
+    renderDocsTable();
+  });
+  box.querySelectorAll('.chk-doc').forEach(cb=>{
+    cb.addEventListener('change', ()=>{
+      if(cb.checked) DOC_SEL.add(cb.dataset.doc);
+      else DOC_SEL.delete(cb.dataset.doc);
+      updateBulkBar();
+    });
+  });
+  updateBulkBar();
+}
+
+function docRow(d){
+  const sel = DOC_SEL.has(d.doc_id);
+  const cat = d.category_path
+    ? `<span class="tag cat" title="${esc(d.category_path)}">${esc(d.category_path)}</span>`
+    : `<span class="td-dim">未分类</span>`;
+  return `<tr>
+    <td class="col-check"><input type="checkbox" class="chk-doc" data-doc="${esc(d.doc_id)}" ${sel?'checked':''} /></td>
+    <td class="td-title" title="${esc(d.title)}">${esc(d.title || '(无标题)')}</td>
+    <td>${cat}</td>
+    <td><span class="tag">${esc(d.source_type || '—')}</span></td>
+    <td>${d.char_count != null ? d.char_count : '—'}</td>
+    <td>${d.chunk_count != null ? d.chunk_count : '—'}</td>
+    <td class="td-dim">${fmtTs(d.updated_at || d.mtime)}</td>
+    <td><div class="row-actions">
+      <button class="btn sm" data-act="chunks" data-doc="${esc(d.doc_id)}" type="button">切片</button>
+      <button class="btn sm" data-act="assign" data-doc="${esc(d.doc_id)}" type="button">归类</button>
+      <button class="btn sm danger" data-act="del" data-doc="${esc(d.doc_id)}" data-title="${esc(d.title||'')}" type="button">删除</button>
+    </div></td>
+  </tr>`;
+}
+
+function updateBulkBar(){
+  const bar = $('#bulkbar'), cnt = $('#bulk-count');
+  if(!bar) return;
+  const n = DOC_SEL.size;
+  bar.classList.toggle('show', n > 0);
+  if(cnt) cnt.textContent = `已选 ${n} 篇`;
+}
+
+function renderPager(){
+  const box = $('#pager');
+  if(!box) return;
+  const pages = Math.max(1, Math.ceil(DOC_TOTAL / DOC_LIMIT));
+  const from = DOC_TOTAL ? (DOC_PAGE-1)*DOC_LIMIT + 1 : 0;
+  const to = Math.min(DOC_PAGE*DOC_LIMIT, DOC_TOTAL);
+  box.innerHTML = `
+    <span class="info">共 ${DOC_TOTAL} 篇　第 ${DOC_PAGE} / ${pages} 页${DOC_TOTAL?`（${from}-${to}）`:''}</span>
+    <span class="spacer"></span>
+    <select class="mini-input" id="pg-size">
+      <option value="20" ${DOC_LIMIT===20?'selected':''}>每页 20</option>
+      <option value="50" ${DOC_LIMIT===50?'selected':''}>每页 50</option>
+      <option value="100" ${DOC_LIMIT===100?'selected':''}>每页 100</option>
+    </select>
+    <button class="btn sm" id="pg-prev" ${DOC_PAGE<=1?'disabled':''} type="button">上一页</button>
+    <button class="btn sm" id="pg-next" ${DOC_PAGE>=pages?'disabled':''} type="button">下一页</button>`;
+  $('#pg-prev').addEventListener('click', ()=>loadDocsPage(DOC_PAGE-1));
+  $('#pg-next').addEventListener('click', ()=>loadDocsPage(DOC_PAGE+1));
+  $('#pg-size').addEventListener('change', ()=>{
+    DOC_LIMIT = parseInt($('#pg-size').value, 10);
+    loadDocsPage(1);
+  });
+}
+
+/* 单篇归类 */
+function assignOne(docId){
+  const d = DOC_ROWS.find(x=>x.doc_id===docId);
+  openModal('归类到', `
+    <div>
+      <label>文档</label>
+      <div class="modal-note">${esc((d && d.title) || docId)}</div>
+    </div>
+    <div>
+      <label>目标分类</label>
+      <select id="m-assign-cat">
+        <option value="0" ${!(d&&d.category_id)?'selected':''}>（未分类）</option>
+        ${catOptionsHTML((d && d.category_id) || 0, null)}
+      </select>
+    </div>`, async ()=>{
+    const cid = parseInt($('#m-assign-cat').value || '0', 10);
+    try{
+      await api('POST', '/admin/api/docs/category', {doc_ids:[docId], category_id: cid});
+      toast('已归类');
+      closeModal();
+      DOC_SEL.delete(docId);
+      loadCategories();
+      loadDocsPage(DOC_PAGE);
+    }catch(e){ toast(e.message, true); }
+  });
+}
+
+async function bulkAssign(){
+  if(!DOC_SEL.size){ toast('请先勾选文档', true); return; }
+  const el = $('#bulk-cat');
+  if(!el || el.value === ''){ toast('请选择目标分类', true); return; }
+  const cid = parseInt(el.value, 10);
+  const ids = Array.from(DOC_SEL);
+  if(!confirm(`把选中的 ${ids.length} 篇文档归类到所选分类？`)) return;
+  try{
+    const r = await api('POST', '/admin/api/docs/category', {doc_ids: ids, category_id: cid});
+    toast(`已归类 ${r.updated} 篇`);
+    DOC_SEL.clear();
+    loadCategories();
+    loadDocsPage(DOC_PAGE);
+  }catch(e){ toast(e.message, true); }
+}
+
+async function bulkDelete(){
+  if(!DOC_SEL.size){ toast('请先勾选文档', true); return; }
+  const ids = Array.from(DOC_SEL);
+  if(!confirm(`确认删除选中的 ${ids.length} 篇文档？\n该操作不可恢复，将同时删除其全部分块与向量索引。`)) return;
+  try{
+    const r = await api('POST', '/admin/api/docs/delete-batch', {doc_ids: ids});
+    toast(r.errors && r.errors.length
+      ? `已删除 ${r.deleted} 篇，${r.errors.length} 篇失败（${r.errors[0]}）`
+      : `已删除 ${r.deleted} 篇`);
+    DOC_SEL.clear();
+    loadCategories();
+    loadDocsPage(DOC_PAGE);
+  }catch(e){ toast(e.message, true); }
+}
+
+async function deleteOne(docId, title){
+  const name = title || docId;
+  if(!confirm(`确认删除「${name}」？\n该操作不可恢复，将同时删除其全部分块与向量索引。`)) return;
+  try{
+    await api('POST', '/admin/api/docs/delete', {doc_id: docId});
+    toast('已删除「' + name + '」');
+    loadCategories();
+    loadDocsPage(DOC_PAGE);
+  }catch(e){ toast(e.message, true); }
+}
+
+/* 查看文档切片 */
+async function viewChunks(docId){
+  const d0 = DOC_ROWS.find(x=>x.doc_id===docId);
+  const title = (d0 && d0.title) || docId;
+  openModal('文档切片', `
+    <div class="modal-note">文档：${esc(title)}</div>
+    <div class="modal-note" id="chunks-total"></div>
+    <div id="chunks-body"><div class="chunk-list"><div class="empty">加载中…</div></div></div>
+  `, closeModal, '关闭');
+  $('#mask .modal').classList.add('wide');
+  $('#modal-body').classList.add('scroll');
+  $('#modal-cancel').style.display = 'none';
+  try{
+    const d = await api('GET', '/admin/api/docs/' + encodeURIComponent(docId) + '/chunks');
+    const chunks = Array.isArray(d.chunks) ? d.chunks.slice().sort((a,b)=>(a.ordinal - b.ordinal)) : [];
+    $('#chunks-total').textContent = '共 ' + (d.total != null ? d.total : chunks.length) + ' 个切片';
+    const body = $('#chunks-body');
+    if(!chunks.length){
+      body.innerHTML = `<div class="empty">暂无切片</div>`;
+      return;
+    }
+    body.innerHTML = `<div class="chunk-list">${chunks.map(c=>{
+      const tags = [];
+      if(c.title) tags.push(`<span class="chunk-tag" title="${esc(c.title)}">${esc(c.title)}</span>`);
+      if(c.section) tags.push(`<span class="chunk-tag" title="${esc(c.section)}">${esc(c.section)}</span>`);
+      if(c.is_parent) tags.push(`<span class="chunk-flag">父块</span>`);
+      return `<div class="chunk-item ${c.is_parent?'parent':''}">
+        <div class="chunk-head">
+          <span class="chunk-ord">#${c.ordinal != null ? c.ordinal : '—'}</span>
+          ${tags.join('')}
+          <span class="td-dim" style="margin-left:auto">${c.char_count != null ? c.char_count + ' 字' : ''}</span>
+        </div>
+        <div class="chunk-text">${esc(c.text || '')}</div>
+      </div>`;
+    }).join('')}</div>`;
+  }catch(e){
+    if(e.message !== 'unauth'){
+      const body = $('#chunks-body');
+      if(body) body.innerHTML = `<div class="empty err">切片加载失败：${esc(e.message)}</div>`;
+      toast(e.message, true);
+    }
+  }
+}
+
+/* 上传入库 */
+async function doUpload(){
+  const f = $('#up-file');
+  if(!f || !f.files || !f.files.length){ toast('请先选择文件', true); return; }
+  const cid = parseInt(($('#up-cat') && $('#up-cat').value) || '0', 10);
+  const btn = $('#up-go');
+  btn.disabled = true; btn.textContent = '上传中…';
+  const fd = new FormData();
+  fd.append('file', f.files[0]);
+  fd.append('category_id', String(cid));
+  try{
+    const r = await fetch('/admin/api/docs/upload', {method:'POST', body: fd});
+    if(r.status === 401){ window.location.href = '/'; return; }
+    const d = await r.json();
+    if(!r.ok) throw new Error((d && d.detail) || ('上传失败（' + r.status + '）'));
+    if(d.ok){
+      toast(`已入库「${d.title}」（${d.chunks} 个分块）`);
+      f.value = '';
+      loadCategories();
+      loadDocsPage(1);
+    }else{
+      toast(d.message || '文件已保存，但未产生可用文本', true);
+    }
+  }catch(e){ toast(e.message, true); }
+  finally{ btn.disabled = false; btn.textContent = '上传入库'; }
+}
+
+/* ================= 模块二：入库维护 ================= */
+function renderKB(){
+  $('#content').innerHTML = `
+    <div class="panel">
+      <div class="panel-h"><span>入库报告</span>
+        <div class="ph-right">
+          <input class="mini-input" id="ingest-path" type="text" placeholder="入库目录，如 docs" style="width:190px" autocomplete="off" />
+          <button class="btn primary" id="reingest" type="button">重新入库</button>
+          <button class="btn" id="report-refresh" type="button">刷新</button>
+        </div>
+      </div>
+      <div class="panel-b" id="report-body"><div class="empty">加载中…</div></div>
+    </div>
+    <div class="panel">
+      <div class="panel-h"><span>未命中问题清单</span>
+        <div class="ph-right"><button class="btn" id="unans-refresh" type="button">刷新</button></div>
+      </div>
+      <div class="panel-b" id="unans-body"><div class="empty">加载中…</div></div>
+    </div>
+    <div class="panel">
+      <div class="panel-h"><span>检索索引</span>
+        <span class="hint">分类改名或批量归类后需重建，否则检索仍在用旧分类词</span>
+      </div>
+      <div class="panel-b">
+        <button class="btn" id="bm25-rebuild" type="button">重建 BM25 索引</button>
+        <span class="td-dim" id="bm25-note" style="margin-left:10px"></span>
+      </div>
+    </div>`;
+
+  $('#reingest').addEventListener('click', doReingest);
+  $('#report-refresh').addEventListener('click', loadReport);
+  $('#unans-refresh').addEventListener('click', loadUnanswered);
+  $('#bm25-rebuild').addEventListener('click', doRebuildBm25);
+
+  loadReport();
+  loadUnanswered();
+}
+
+async function doRebuildBm25(){
+  const btn = $('#bm25-rebuild');
+  btn.disabled = true; btn.textContent = '重建中…';
+  $('#bm25-note').textContent = '大库可能需要数十秒…';
+  try{
+    const r = await api('POST', '/admin/api/bm25/rebuild', {}, 15 * 60 * 1000);
+    $('#bm25-note').textContent = `完成，索引 ${r.chunks} 个分块`;
+    toast('BM25 索引已重建');
+  }catch(e){
+    if(e.message !== 'unauth') toast('重建失败：' + e.message, true);
+    $('#bm25-note').textContent = '';
+  }finally{
+    btn.disabled = false; btn.textContent = '重建 BM25 索引';
+  }
+}
+
+async function doReingest(){
+  const path = ($('#ingest-path').value || '').trim();
+  if(!path){
+    toast('请先填写入库目录路径', true);
+    return;
+  }
+  if(!confirm('将重新解析入库目录「' + path + '」（增量入库，未变化文档会跳过）。确认继续？')) return;
+  const btn = $('#reingest');
+  const body = $('#report-body');
+  btn.disabled = true; btn.textContent = '入库中…';
+  body.innerHTML = `<div class="empty">正在重新入库，请稍候（大库可能需要数分钟）…</div>`;
+  try{
+    await api('POST', '/ingest', {path: path, force: true}, 15 * 60 * 1000);
+    toast('入库完成');
+    loadReport();
+  }catch(e){
+    if(e.name === 'AbortError'){
+      body.innerHTML = `<div class="empty err">入库超时（超过 15 分钟）。请稍后点击刷新查看是否已完成。</div>`;
+    }else if(e.message !== 'unauth'){
+      body.innerHTML = `<div class="empty err">入库失败：${esc(e.message)}</div>`;
+    }
+  }finally{
+    btn.disabled = false; btn.textContent = '重新入库';
+  }
+}
+
+async function loadReport(){
+  const body = $('#report-body');
+  try{
+    const d = await api('GET', '/admin/api/ingest/report');
+    const report = d && d.report ? d.report : null;
+    if(!report || typeof report !== 'object'){
+      body.innerHTML = `<div class="empty">暂无入库记录</div>`;
+      return;
+    }
+    renderReport(report, d && d.last_run_at);
+  }catch(e){
+    if(e.message !== 'unauth') body.innerHTML = `<div class="empty err">入库报告加载失败：${esc(e.message)}</div>`;
+  }
+}
+
+function renderReport(r, lastRunAt){
+  const body = $('#report-body');
+  const stat = v => (v == null ? '—' : v);
+  const rows = [
+    ['新增', r.added], ['更新', r.updated], ['跳过', r.skipped], ['失败', r.failed],
+    ['本次分块', r.chunks], ['库内文档', r.docs_total], ['库内分块', r.chunks_total], ['耗时(秒)', r.elapsed_s]
+  ];
+  let html = (lastRunAt ? `<div class="report-time">最近入库时间：${fmtTs(lastRunAt)}</div>` : '')
+    + `<div class="stat-grid">${rows.map(([k,v])=>`<div class="stat"><div class="stat-v">${stat(v)}</div><div class="stat-k">${esc(k)}</div></div>`).join('')}</div>`;
+
+  const lists = [];
+  if(r.failed && Array.isArray(r.errors) && r.errors.length) lists.push(['失败详情', r.errors]);
+  if(Array.isArray(r.unsupported) && r.unsupported.length) lists.push(['格式不支持（未入库）', r.unsupported]);
+  if(Array.isArray(r.empty_text) && r.empty_text.length) lists.push(['无可用文本', r.empty_text]);
+  if(lists.length){
+    html += `<div class="report-lists">${lists.map(([t,arr])=>`
+      <div class="rlist"><div class="rlist-t">${esc(t)}（${arr.length}）</div>
+      <ul>${arr.slice(0,20).map(x=>`<li>${esc(x)}</li>`).join('')}${arr.length > 20 ? `<li>… 另有 ${arr.length - 20} 条</li>` : ''}</ul></div>`).join('')}</div>`;
+  }
+  body.innerHTML = html;
+}
+
+async function loadUnanswered(){
+  const body = $('#unans-body');
+  try{
+    const d = await api('GET', '/unanswered');
+    const items = Array.isArray(d.items) ? d.items : (Array.isArray(d) ? d : []);
+    if(!items.length){
+      body.innerHTML = `<div class="empty">暂无未命中问题</div>`;
+      return;
+    }
+    body.innerHTML = `<table>
+      <thead><tr><th>问题</th><th>改写后</th><th>最高相关度</th><th>原因</th><th>时间</th></tr></thead>
+      <tbody>${items.map(u=>`<tr>
+        <td class="td-title">${esc(u.query || '')}</td>
+        <td class="td-dim">${esc(u.rewritten || '')}</td>
+        <td>${fmtPct(u.top_score)}</td>
+        <td><span class="tag ${reasonClass(u.reason)}">${esc(reasonLabel(u.reason))}</span></td>
+        <td class="td-dim">${fmtTs(u.ts)}</td>
+      </tr>`).join('')}</tbody>
+    </table>`;
+  }catch(e){
+    if(e.message !== 'unauth') body.innerHTML = `<div class="empty err">未命中问题加载失败：${esc(e.message)}</div>`;
+  }
+}
+
+const REASON_LABEL = {'no_hit':'检索未命中','model_refused':'模型拒答','citation_missing':'引用缺失'};
+function reasonLabel(r){ return REASON_LABEL[r] || (r || '未知'); }
+function reasonClass(r){
+  if(r === 'no_hit') return 'err';
+  if(r === 'citation_missing') return 'warn';
+  return '';
+}
+
+/* ================= 模块三：账号管理 ================= */
+function renderAccounts(){
+  $('#content').innerHTML = `
+    <div class="panel">
+      <div class="panel-h">新增账号 <span class="hint">账号发给员工，密码至少 6 位</span></div>
+      <div class="add-form">
+        <input type="text" id="n-user" placeholder="账号（字母/数字/-/_/.）" autocomplete="off" />
+        <span class="pwd-wrap">
+          <input type="password" id="n-pass" placeholder="初始密码" autocomplete="new-password" />
+          <button class="eye" id="n-eye" data-toggle="n-pass" type="button" title="显示密码" aria-label="显示密码">${EYE_OPEN}</button>
+        </span>
+        <select id="n-role">
+          <option value="user">普通用户</option>
+          <option value="admin">管理员</option>
+        </select>
+        <button class="btn primary" id="n-add" type="button">添加</button>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-h">账号列表 <span class="hint" id="count"></span></div>
+      <div class="panel-b" style="padding:0">
+        <table>
+          <thead><tr><th>账号</th><th>角色</th><th>状态</th><th>创建时间</th><th style="width:280px">操作</th></tr></thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </div>`;
+
+  $('#n-add').addEventListener('click', addAccount);
+  loadAccounts();
+}
+
+async function loadAccounts(){
+  const d = await api('GET', '/admin/api/accounts');
+  ME.username = d.me;
+  updateMe();
+  $('#count').textContent = '共 ' + d.accounts.length + ' 个账号';
+  $('#tbody').innerHTML = d.accounts.map(a=>{
+    const isMe = a.username === ME.username;
+    const roleTag = a.role === 'admin' ? '<span class="tag admin">管理员</span>' : '<span class="tag user">普通用户</span>';
+    const stateTag = a.enabled ? '<span class="tag on">启用</span>' : '<span class="tag off">停用</span>';
+    const act = [];
+    act.push(`<button class="btn" data-act="reset" data-u="${esc(a.username)}" type="button">改密</button>`);
+    if(!isMe){
+      act.push(a.enabled
+        ? `<button class="btn danger" data-act="toggle" data-u="${esc(a.username)}" data-en="0" type="button">停用</button>`
+        : `<button class="btn" data-act="toggle" data-u="${esc(a.username)}" data-en="1" type="button">启用</button>`);
+    }
+    if(a.role === 'user' && a.enabled){
+      act.push(`<button class="btn" data-act="promote" data-u="${esc(a.username)}" type="button">设为管理员</button>`);
+    }
+    return `<tr class="${isMe?'me-row':''}">
+      <td class="td-title">${esc(a.username)}${isMe?' <span style="color:var(--text-3);font-size:11px">(你)</span>':''}</td>
+      <td>${roleTag}</td>
+      <td>${stateTag}</td>
+      <td class="td-dim">${fmtTs(a.created_at)}</td>
+      <td><div class="row-actions">${act.join('')}</div></td>
+    </tr>`;
+  }).join('');
+}
+
+async function addAccount(){
+  const username = $('#n-user').value.trim();
+  const password = $('#n-pass').value;
+  const role = $('#n-role').value;
+  if(!username || !password){ toast('请填写账号和密码', true); return; }
+  try{
+    await api('POST', '/admin/api/accounts', {username, password, role});
+    toast('已创建账号 ' + username);
+    $('#n-user').value = ''; $('#n-pass').value = '';
+    loadAccounts();
+  }catch(e){ toast(e.message, true); }
+}
+
+/* 改密：用带显隐的模态框替代 prompt()，避免明文暴露在地址栏可读的原生弹窗里 */
+function resetPwd(username){
+  openModal('修改密码', `
+    <div>
+      <label>账号</label>
+      <div class="modal-note">${esc(username)}</div>
+    </div>
+    <div>
+      <label>新密码（至少 6 位）</label>
+      <span class="pwd-wrap" style="display:flex">
+        <input type="password" id="m-pass" placeholder="输入新密码" autocomplete="new-password" />
+        <button class="eye" id="m-eye" data-toggle="m-pass" type="button" title="显示密码" aria-label="显示密码">${EYE_OPEN}</button>
+      </span>
+    </div>`, async ()=>{
+    const pwd = ($('#m-pass').value || '');
+    if(pwd.length < 6){ toast('密码至少 6 位', true); return; }
+    try{
+      await api('POST', '/admin/api/password', {username, password: pwd});
+      toast('已更新「' + username + '」的密码');
+      closeModal();
+    }catch(e){ toast(e.message, true); }
+  }, '保存');
+}
+
+async function toggleAccount(username, enabled){
+  try{
+    await api('POST', '/admin/api/enabled', {username, enabled});
+    toast((enabled ? '已启用 ' : '已停用 ') + username);
+    loadAccounts();
+  }catch(e){ toast(e.message, true); }
+}
+
+async function promoteAccount(username){
+  if(!confirm('确认将「' + username + '」设为管理员？')) return;
+  try{
+    await api('POST', '/admin/api/role', {username, role:'admin'});
+    toast('已将 ' + username + ' 设为管理员');
+    loadAccounts();
+  }catch(e){ toast(e.message, true); }
+}
+
+/* ================= 模块四：API 调用量 ================= */
+let METRICS_HOURS = 24;
+
+function renderMetrics(){
+  METRICS_HOURS = 24;
+  $('#content').innerHTML = `
+    <div class="panel">
+      <div class="panel-h"><span>API 调用量</span>
+        <div class="ph-right">
+          <select class="mini-input" id="metrics-range">
+            <option value="24" selected>24 小时</option>
+            <option value="168">7 天</option>
+            <option value="720">30 天</option>
+          </select>
+        </div>
+      </div>
+      <div class="panel-b" id="metrics-body"><div class="empty">加载中…</div></div>
+    </div>`;
+  $('#metrics-range').addEventListener('change', ()=>{
+    METRICS_HOURS = parseInt($('#metrics-range').value || '24', 10);
+    $('#metrics-body').innerHTML = `<div class="empty">加载中…</div>`;
+    loadMetrics();
+  });
+  loadMetrics();
+}
+
+async function loadMetrics(){
+  const body = $('#metrics-body');
+  try{
+    const d = await api('GET', '/admin/api/metrics?hours=' + METRICS_HOURS);
+    renderMetricsData(d);
+  }catch(e){
+    if(e.message !== 'unauth'){
+      body.innerHTML = `<div class="empty err">API 调用量加载失败：${esc(e.message)}</div>`;
+    }
+  }
+}
+
+function hourLabel(hour){
+  const d = new Date(hour * 3600 * 1000);
+  const p = n => String(n).padStart(2, '0');
+  return `${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:00`;
+}
+
+function renderMetricsData(d){
+  const body = $('#metrics-body');
+  const stat = v => (v == null ? '—' : v);
+  let html = `<div class="stat-grid">
+    <div class="stat"><div class="stat-v">${stat(d.total)}</div><div class="stat-k">总调用次数</div></div>
+    <div class="stat"><div class="stat-v">${stat(d.errors)}</div><div class="stat-k">错误数</div></div>
+    <div class="stat"><div class="stat-v">${stat(d.avg_ms)}</div><div class="stat-k">平均耗时(ms)</div></div>
+    <div class="stat"><div class="stat-v">${stat(d.max_ms)}</div><div class="stat-k">最大耗时(ms)</div></div>
+  </div>`;
+
+  const eps = Array.isArray(d.by_endpoint) ? d.by_endpoint : [];
+  html += `<div class="report-lists" style="margin-top:14px"><div class="rlist"><div class="rlist-t">接口调用排行</div>`;
+  if(eps.length){
+    html += `<table><thead><tr><th>接口</th><th>调用次数</th><th>错误数</th><th>平均耗时(ms)</th><th>最大耗时(ms)</th></tr></thead>
+      <tbody>${eps.map(e=>`<tr>
+        <td><span class="tag" style="margin-right:6px">${esc(e.method || '')}</span><span class="td-mono">${esc(e.path || '')}</span></td>
+        <td>${stat(e.count)}</td><td>${stat(e.errors)}</td><td>${stat(e.avg_ms)}</td><td>${stat(e.max_ms)}</td>
+      </tr>`).join('')}</tbody></table>`;
+  }else{
+    html += `<div class="empty">暂无数据</div>`;
+  }
+  html += `</div>`;
+
+  const hours = Array.isArray(d.by_hour) ? d.by_hour.slice().sort((a,b)=>(a.hour - b.hour)) : [];
+  html += `<div class="rlist"><div class="rlist-t">按小时趋势</div>`;
+  if(hours.length){
+    const max = Math.max(1, ...hours.map(h=>h.count || 0));
+    const step = Math.ceil(hours.length / 16);
+    const PLOT_H = 150;
+    html += `<div class="bar-chart">${hours.map((h,i)=>{
+      const v = h.count || 0;
+      const hh = Math.max(2, Math.round(v / max * PLOT_H));
+      const show = (i % step === 0) || (i === hours.length - 1);
+      return `<div class="bar-col" title="${hourLabel(h.hour)}：${v} 次">
+        <div class="bar-stack"><span class="bar-v">${v}</span><div class="bar" style="height:${hh}px"></div></div>
+        <span class="bar-label">${show ? hourLabel(h.hour) : ''}</span>
+      </div>`;
+    }).join('')}</div>`;
+  }else{
+    html += `<div class="empty">暂无数据</div>`;
+  }
+  html += `</div></div>`;
+
+  body.innerHTML = html;
+}
+
+/* ================= 全局动作委托 ================= */
+document.addEventListener('click', async e=>{
+  // 分类树：选中节点
+  const node = e.target.closest('.cat-node[data-cat]');
+  if(node && !e.target.closest('.cat-ops')){
+    const id = parseInt(node.dataset.cat, 10);
+    if(!Number.isNaN(id)){
+      const c = CATS.find(x=>x.id===id);
+      if(c && c.parent_id === 0) CAT_OPEN.add(id);
+      // 点击已展开的分类标题时折叠，否则切换选中
+      if(c && CAT_SEL === id && catChildren(id).length){
+        if(CAT_OPEN.has(id)) CAT_OPEN.delete(id); else CAT_OPEN.add(id);
+      }
+      CAT_SEL = id;
+      renderCatTree();
+      loadDocsPage(1);
+    }
+    return;
+  }
+  // 分类树：操作按钮
+  const op = e.target.closest('.cat-ops button');
+  if(op){
+    e.stopPropagation();
+    const id = parseInt(op.dataset.id, 10);
+    const a = op.dataset.act;
+    if(a === 'new') catEdit(null, id);
+    else if(a === 'edit') catEdit(CATS.find(x=>x.id===id), 0);
+    else if(a === 'del') catDelete(id);
+    else if(a === 'up') catMove(id, -1);
+    else if(a === 'down') catMove(id, 1);
+    return;
+  }
+  // 文档行内操作
+  const da = e.target.closest('[data-act][data-doc]');
+  if(da){
+    const a = da.dataset.act, doc = da.dataset.doc;
+    if(a === 'chunks') viewChunks(doc);
+    else if(a === 'assign') assignOne(doc);
+    else if(a === 'del') deleteOne(doc, da.dataset.title);
+    return;
+  }
+  // 账号行内操作
+  const act = e.target.closest('[data-act][data-u]');
+  if(act){
+    const u = act.dataset.u, a = act.dataset.act;
+    if(a === 'reset') await resetPwd(u);
+    else if(a === 'toggle') await toggleAccount(u, act.dataset.en === '1');
+    else if(a === 'promote') await promoteAccount(u);
+  }
+});
+
+/* ================= 账号信息 ================= */
+function updateMe(){
+  if(ME.username){
+    $('#me-name').textContent = ME.username;
+    $('#me-avatar').textContent = ME.username.charAt(0).toUpperCase();
+    $('#me-role').textContent = ME.role === 'admin' ? '管理员' : '普通用户';
+  }
+}
+
+/* ================= 退出登录 ================= */
+$('#logout').addEventListener('click', ()=>{
+  fetch('/logout', {method:'POST'}).finally(()=>{ window.location.href = '/'; });
+});
+
+/* ================= 30 分钟无操作自动登出 ================= */
+(function(){
+  const IDLE_MS = 30 * 60 * 1000;
+  let timer = null, loggingOut = false;
+  function doLogout(){
+    if(loggingOut) return;
+    loggingOut = true;
+    fetch('/logout', {method:'POST'}).finally(()=>{ window.location.href = '/'; });
+  }
+  function reset(){
+    clearTimeout(timer);
+    timer = setTimeout(doLogout, IDLE_MS);
+  }
+  ['mousedown','mousemove','keydown','scroll','touchstart','touchmove','wheel','click'].forEach(ev=>{
+    document.addEventListener(ev, reset, {passive:true});
+  });
+  document.addEventListener('visibilitychange', ()=>{
+    if(document.visibilityState === 'hidden') clearTimeout(timer);
+    else reset();
+  });
+  reset();
+})();
+
+/* ================= 初始化 ================= */
+document.querySelectorAll('.nav-item').forEach(i=>{
+  i.addEventListener('click', ()=>switchView(i.dataset.view));
+});
+
+switchView('library');
+
+fetch('/me').then(r=>r.ok?r.json():null).then(d=>{
+  if(d){ ME.username = d.username; ME.role = d.role; updateMe(); }
+}).catch(()=>{});
+</script>
+</body>
+</html>

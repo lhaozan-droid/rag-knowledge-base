@@ -1,0 +1,15 @@
+{"question": "年假有多少天", "gold_doc": "01-员工手册.md", "must_contain": ["15"]}
+{"question": "我工作满6年了，年休假能休几天", "gold_doc": "01-员工手册.md", "must_contain": ["15"]}
+{"question": "年假没休完可以留到明年吗", "gold_doc": "01-员工手册.md", "must_contain": ["3 月 31"]}
+{"question": "出差去上海住宿一晚最多报多少", "gold_doc": "03-差旅与费用报销制度.md", "must_contain": ["600"]}
+{"question": "坐飞机什么情况下可以买商务舱", "gold_doc": "03-差旅与费用报销制度.md", "must_contain": ["4 小时"]}
+{"question": "出差回来多久之内要报销", "gold_doc": "03-差旅与费用报销制度.md", "must_contain": ["15 个工作日"]}
+{"question": "密码多久必须更换一次", "gold_doc": "04-信息安全与数据合规规范.md", "must_contain": ["90 天"]}
+{"question": "客户名单能不能通过微信发给别人", "gold_doc": "04-信息安全与数据合规规范.md", "must_contain": ["禁止"]}
+{"question": "病假需要什么证明材料", "gold_doc": "02-考勤与请假管理办法.md", "must_contain": ["医院"]}
+{"question": "请假7天以上需要谁审批", "gold_doc": "02-考勤与请假管理办法.md", "must_contain": ["人力资源总监"]}
+{"question": "新员工入职30天内要完成哪些必修课", "gold_doc": "05-新员工入职培训指引.md", "must_contain": ["6 学时"]}
+{"question": "试用期一般是多久", "gold_doc": "05-新员工入职培训指引.md", "must_contain": ["3 个月"]}
+{"question": "发现数据泄露要多久内上报", "gold_doc": "04-信息安全与数据合规规范.md", "must_contain": ["1 小时"]}
+{"question": "公司食堂中午几点开饭", "gold_doc": null, "expect_no_answer": true}
+{"question": "竞品公司今年的财报怎么样", "gold_doc": null, "expect_no_answer": true}

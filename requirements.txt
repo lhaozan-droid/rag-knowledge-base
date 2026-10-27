@@ -1,0 +1,45 @@
+# ---- 核心运行依赖（离线可跑） ----
+fastapi>=0.110
+# 请求模型直接 import pydantic（app/api/server.py 模块级），且用的是 v2 语义：
+# Field(min_length=...) 作用在 List[str] 上，v1 里对应的是 min_items、且不生效。
+# 所以这里显式要求 v2，不靠 fastapi 的传递依赖（用户环境若残留 v1 会静默丢校验）。
+pydantic>=2.0
+uvicorn[standard]>=0.27
+httpx>=0.26
+# 管理后台上传文档入库需要；缺它时 /admin/api/docs/upload 会在解析 multipart 时报错
+python-multipart>=0.0.9
+# 账号口令哈希（app/auth.py 模块级 import，缺它服务无法启动）
+bcrypt>=4.1
+PyYAML>=6.0
+python-dotenv>=1.0
+rank-bm25>=0.2.2
+jieba>=0.42.1
+numpy>=1.26
+pytest>=8.0
+
+# ---- 向量库（二选一，默认 chroma） ----
+chromadb>=0.5
+
+# ---- 文档解析 ----
+# pymupdf：PDF 版面顺序、页眉页脚、扫描页判定；缺它会退回 pypdf，能力降级
+# pypdf：PDF 兜底
+pymupdf>=2.0
+pypdf>=4.0
+python-docx>=1.1
+python-pptx>=0.6.23
+openpyxl>=3.1
+pillow>=10.0
+
+# ---- 图片 / 扫描件 OCR（本地 ONNX，不出网） ----
+# rapidocr 复用 chromadb 已带的 onnxruntime，模型随包分发，无需系统级安装
+rapidocr-onnxruntime>=1.2
+opencv-python>=4.8
+
+# ---- 本地 Embedding（默认方案，不需要 torch / ollama） ----
+# fastembed 自带 ONNX 推理，复用 chromadb 已带的 onnxruntime，
+# 模型首次使用时下载到 data/models（约 640MB），之后完全离线。
+fastembed>=0.4
+
+# ---- 可选：本地 Embedding 备选（体积大得多，一般不必装） ----
+# sentence-transformers>=2.7
+# torch>=2.2

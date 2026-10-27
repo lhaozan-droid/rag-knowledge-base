@@ -1,0 +1,61 @@
+# ============================================================
+# cloudflared 隧道配置示例 —— 只用于「想让外网访问本机服务」的场景
+#
+# 这是示例文件，不是可直接运行的配置。复制成 cloudflared-config.yml 后
+# 把所有占位符换成你自己的值。真实配置已在 .gitignore 里排除，不要提交。
+#
+# 本文件里的域名、路径、隧道 ID 全是占位符，与任何真实环境无关。
+# ============================================================
+
+# 隧道 ID / 名称。用 `cloudflared tunnel list` 查看，或 `cloudflared tunnel create` 的输出。
+tunnel: <YOUR_TUNNEL_ID>
+
+# 隧道凭据 JSON 的绝对路径。`cloudflared tunnel create` 会把它写到
+# ~/.cloudflared/<YOUR_TUNNEL_ID>.json（Windows 在 %USERPROFILE%\.cloudflared\）。
+# 新版 cloudflared 可以省略这一行，由它按 tunnel 自动查找；显式写出来更好排查。
+credentials-file: /path/to/<YOUR_TUNNEL_ID>.json
+
+# 传输协议：quic 走 UDP 更快；如果所在网络封 UDP，改成 http2。
+protocol: quic
+
+# 入口规则：自上而下匹配，最后一条必须是兜底，否则 cloudflared 拒绝启动。
+ingress:
+  # 公网域名 → 本机服务。改成你自己的域名，并在 Cloudflare 侧有对应的 DNS 记录。
+  - hostname: rag.example.com
+    service: http://127.0.0.1:8080
+  # 未匹配任何 hostname 的请求直接返回 404，避免把服务意外暴露给任意域名。
+  - service: http_status:404
+
+# ---- 可选：连接参数（多数情况不需要改） ----
+# originRequest:
+#   connectTimeout: 30s        # 与源站建立连接的超时
+#   tcpKeepAlive: 30s
+#   # 注意：问答接口的单次请求可能持续几十秒（检索 + 云端模型生成），
+#   # connectTimeout 只约束建连，不要为了「怕超时」把它调到很大。
+
+# ============================================================
+# 创建隧道的一般流程
+#
+#   cloudflared tunnel login                       # 浏览器授权，生成 cert.pem
+#   cloudflared tunnel create rag-kb               # 创建隧道，输出隧道 ID 和凭据文件
+#   cloudflared tunnel list                        # 查看隧道 ID / 名称 / 连接状态
+#   cloudflared tunnel route dns rag-kb rag.example.com    # 把域名指向隧道
+#   cloudflared tunnel ingress validate            # 启动前校验本文件语法
+#   cloudflared tunnel --config cloudflared-config.yml run rag-kb
+#
+# ============================================================
+# 安全提醒（暴露到公网之前必须逐条确认）
+#
+# 1. 先改掉默认账号口令。首次访问时终端打印的 admin 初始口令是随机生成的，
+#    但一旦泄露就等于把知识库交给别人。先在本机登录改密，再考虑开隧道。
+# 2. 确认监听地址。服务默认只监听 127.0.0.1，这正是隧道需要的形态：
+#    隧道进程在本机连 127.0.0.1:8080，不需要把服务改成 0.0.0.0。
+#    服务不要同时监听 0.0.0.0 + 安全组放开端口，那是绕过隧道直接把服务暴露到公网。
+# 3. 加访问控制。裸隧道等于把登录页公网可见，撞库和爬取都会来。
+#    至少选一种：Cloudflare Access（在 Cloudflare 后台给该域名加策略）、
+#    前置一层带 IP 白名单的反向代理、或只对固定出口 IP 放开。
+# 4. 流式接口 /chat/stream 走 SSE。链路上的任何一层缓冲（反向代理、隧道配置、
+#    客户端）都会让「逐字输出」退化成「等全部生成完再一次性返回」。
+#    验证方法：`curl -N` 直连该地址，看 data 事件是否连续分批到达。
+# 5. 隧道凭据 JSON 和配置文件里的隧道 ID 属于环境信息，不要提交、不要贴进 issue。
+# ============================================================
