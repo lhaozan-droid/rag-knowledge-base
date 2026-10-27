@@ -110,7 +110,7 @@ python -m app.cli serve --host 127.0.0.1 --port 8080
 前置：Python 3.10+（开发与测试在 3.13 上进行，其余版本未逐一验证）；磁盘预留 3GB 以上——`requirements.txt` 里的大包（`chromadb`、`fastembed`、`opencv`、`pymupdf`）本身就不小，再加上首次下载约 640MB 的 embedding 模型，以及入库后生成的向量库与索引（Windows 上模型目录会额外多占一份，原因见[常见问题](#常见问题)）。
 
 ```bash
-git clone <仓库地址>
+git clone https://github.com/lhaozan-droid/rag-knowledge-base.git
 cd rag-knowledge-base
 
 python -m venv .venv
