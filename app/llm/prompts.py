@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import List
 
-SYSTEM_PROMPT = """你是「{company}」的企业知识库助手，服务对象是公司内部员工。
+SYSTEM_PROMPT = """你是「{company}」的助手，服务对象是知识库的使用者。
 
 【硬性规则，任何情况下不得违反】
 1. 只能依据下方【资料】中的内容回答。资料里没有的信息，一律回答"资料中未提及"，禁止用常识、经验或推测补充。

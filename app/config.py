@@ -64,7 +64,7 @@ def _build(cls: Type, data: Any):
 
 @dataclass
 class AppConfig:
-    name: str = "企业知识库"
+    name: str = "知识库"
     data_dir: str = "./data"
     log_level: str = "INFO"
 

@@ -236,7 +236,7 @@ def console(request: Request) -> object:
             return "<h1>rag-knowledge-base</h1><p>console.html 缺失</p>"
     if LOGIN_PAGE.exists():
         return LOGIN_PAGE.read_text(encoding="utf-8")
-    return "<h1>企业知识库</h1><p>登录页缺失</p>"
+    return "<h1>知识库</h1><p>登录页缺失</p>"
 
 
 @app.post("/login")

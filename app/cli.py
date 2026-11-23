@@ -154,7 +154,7 @@ def cmd_serve(args) -> int:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(prog="rag-knowledge-base", description="私有化企业知识库 RAG 引擎")
+    p = argparse.ArgumentParser(prog="rag-knowledge-base", description="私有化知识库 RAG 引擎")
     p.add_argument("--config", default=None, help="配置文件路径（默认 config.yaml）")
     sub = p.add_subparsers(dest="cmd", required=True)
 
