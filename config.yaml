@@ -1,0 +1,141 @@
+# ============================================================
+# 私有化企业知识库 RAG 配置（混合模式：本地向量化 + 云端生成）
+# 所有 ${VAR} 会被环境变量替换，${VAR:-默认值} 支持兜底
+# ============================================================
+
+app:
+  name: "企业知识库"
+  data_dir: "./data"
+  log_level: "INFO"
+
+# ---------------- Embedding：本地执行，文档不出内网 ----------------
+embedding:
+  provider: "fastembed"       # fastembed | ollama | sentence_transformers | openai_compat | hash
+  model: "jinaai/jina-embeddings-v2-base-zh"   # 768 维 / 8192 token / 本地 ONNX 推理
+  dim: 768
+  batch_size: 64
+  normalize: true
+  cache: true                 # 按段落哈希缓存向量，增量入库必开
+  device: "cpu"
+  ollama:
+    base_url: "http://127.0.0.1:11434"
+  openai_compat:
+    base_url: ""
+    api_key: ""
+    model: ""
+
+# ---------------- 向量库 ----------------
+vector_store:
+  provider: "chroma"          # chroma（推荐，单机嵌入式） | memory（仅测试）
+  path: "./data/chroma"
+  collection: "kb_main"
+
+# ---------------- 生成模型：云端 API ----------------
+llm:
+  provider: "openai_compat"   # openai_compat | extractive（不配置时的离线兜底）
+  base_url: "https://api.deepseek.com/v1"
+  api_key: "${LLM_API_KEY:-}"
+  model: "deepseek-v4-flash"  # DeepSeek-V4-Flash（1M 上下文，OpenAI 兼容接口）
+                              # 可换成任何 OpenAI 兼容服务的模型名
+  temperature: 0.1            # 知识库问答要稳，不要发散
+  max_tokens: 2048            # deepseek-v4-flash 支持思考模式：思考与答案共用此预算，
+                              # 给到 1200 以下时思考可能吃光预算导致 content 为空
+                              # 本项只作用于「生成答案」。改写 / 纠错 / 精排这些辅助
+                              # 调用在代码里各自写死预算（512 / 512 / 1024），原因同上：
+                              # 预算给小时正文返回空，调用方只会静默回退，功能等于没上线
+  timeout_s: 60
+  max_retries: 2
+
+# ---------------- 检索 ----------------
+retrieval:
+  dense_top_k: 40
+  sparse_top_k: 40
+  fusion_k: 30
+  rrf_k: 60
+  dense_weight: 1.0
+  sparse_weight: 1.0
+  final_top_k: 6              # 最终喂给模型的片段数
+  max_per_doc: 2              # 同一篇文档最多占几条候选。
+                              # 不加这个限制时，一篇长文档的多个碎片会挤满 top_k，
+                              # 上下文去重后只剩两三篇文档，答案必然片面。
+  max_context_chars: 6000     # 上下文总预算，按 final_top_k 均分
+  min_top_score: 0.30         # 拒答阈值（dense 相似度下界）。
+                              # 它只能挡掉「明显跨域」的问题（问天气、问股票、问
+                              # 怎么写代码），这类问题相似度通常只有 0.02~0.25。
+                              # 它挡不住「同域但文档没写」的问题——比如问「公司食堂
+                              # 几点开饭」，即使文档里完全没有食堂信息，相似度也可能
+                              # 到 0.45，因为问题里的「公司」「几点」与制度文档高频
+                              # 重合。这不是参数没调好，是 dense 相似度的固有局限：
+                              # 它衡量「这段文本和问题像不像」，不衡量「这段文本里
+                              # 有没有答案」。
+                              #
+                              # 演示语料（demo-docs/ 5 篇、59 个 chunk）实测：
+                              #   库内问题最低       0.3715  收到钓鱼邮件怎么办
+                              #   跨域库外问题最高   0.2323  世界杯在哪举办
+                              #   同域库外问题最高   0.4771  公司有班车吗  ← 与库内重叠
+                              # 因为有重叠，不存在能准确分开两类问题的阈值，只能取
+                              # 「挡住跨域、放同域」的位置。取 0.30 是偏向放行：
+                              # 误拒的代价（用户以为系统坏了、文档没入库）远大于
+                              # 误放行（模型回一句「没找到」，体验尚可）。
+                              # 同域无答案的问题过了检索闸门后，由生成层的 verdict
+                              # 判定兜住：模型发现片段里没有依据 → 输出「未找到」
+                              # → 标记 NO_ANSWER。
+                              #
+                              # 旧值 0.48 是按其它语料标的，在演示语料上会误拒真
+                              # 问题（如「收到钓鱼邮件怎么办」0.3715）。语料规模、
+                              # 切分方式或 embedding 模型变更后必须重新标定。
+  use_parent_context: true    # 命中子块时补全父块，答案更完整
+  correct_trigger_score: 0.42 # 纠错触发阈值（dense 相似度）。低于此值时先做错别字纠错重检，
+                              # 再决定是否拒答。必须高于拒答阈值 0.30，专门拦「勉强命中但跑偏」。
+                              # 案例：用户把「报账多久之内要交」说成口语版本时
+                              # best_dense 只有 0.34~0.37，纠成「报销」后回到 0.49，
+                              # 能命中《差旅与费用报销制度》§3.1 报销时限。
+                              # 定得太高（如 0.55）会让大量正常问题都白跑一次纠错调用。
+                              # 0 表示关闭纠错重检。
+  expand_glossary: true       # 领域同义词扩展（只作用于 BM25）：
+                              # 用户说「休假怎么申请」，文档写「请假申请 / 年休假」，
+                              # 字面零重合时 BM25 会整条落空。词表见 app/rag/glossary.py。
+                              # 设为 false 可退回纯字面匹配，用于 A/B 对比。
+
+# ---------------- 重排 ----------------
+rerank:
+  provider: "none"            # none | cross_encoder | llm
+  model: "BAAI/bge-reranker-base"
+  top_k: 6
+  llm_candidates: 12
+
+# ---------------- 分块 ----------------
+# ---------------- 入库 ----------------
+ingest:
+  # 一级子目录当部门名，用于权限过滤。
+  # 演示语料是扁平目录（直接放几篇制度文档），没有部门子目录，所以关掉，
+  # 否则 dept 会被写成无意义的目录名，按部门过滤时会误伤。
+  # 若你的知识库确实按「部门/子目录」组织，把它改成 true。
+  dept_from_dir: false
+  # 知识库根目录：管理后台「全部重新入库」会以此作为 POST /ingest 的 path。
+  # 默认指向仓库自带的演示语料，克隆后可直接入库跑通。
+  root: "./demo-docs"
+
+chunking:
+  max_chars: 700
+  overlap_chars: 120
+  min_chars: 80
+  parent_max_chars: 2200
+
+# ---------------- 多轮 ----------------
+conversation:
+  max_turns: 6
+  history_turns_for_llm: 3
+  rewrite: true               # 追问指代消解（只对含指代词或「那…呢」的追问触发；
+                              # 独立问句哪怕只有 5 个字也不改写，见 app/rag/rewrite.py）
+                              # 注意：改写后的串带着上一问的主体，dense 天然比单发高
+                              # 0.15 以上（实测 0.4153 → 0.6859）。所以标定
+                              # min_top_score / correct_trigger_score、或跑召回评测时，
+                              # 必须用单发原句（这里设 false），别拿改写后的串跑，
+                              # 否则新旧阈值不可比，也解释不清分数为什么涨。
+
+# ---------------- 护栏 ----------------
+guard:
+  redact_pii: true            # 片段外发前脱敏手机号/身份证/邮箱/卡号
+  require_citation: true      # 没有引用就降级为"未标注出处"
+  no_answer_text: "根据现有资料，我没能找到能支撑这个问题的内容。建议咨询相关业务负责人，我可以帮你把这个问题记录下来。"
